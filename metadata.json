@@ -1,0 +1,6 @@
+{
+  "name": "Opera Digital",
+  "description": "Plataforma de gestão completa para empreendedores brasileiros: ERP, PDV, Hub de Marketplace, Conta Digital e Agentes de IA.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
