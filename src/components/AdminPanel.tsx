@@ -23,7 +23,6 @@ import {
   getWhatsAppLink 
 } from '../utils/siteSettings';
 import { forceClearCacheAndReload } from '../utils/cacheUtils';
-import { fetchSiteDataFromSupabase, saveSiteDataToSupabase } from '../lib/supabaseData';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -239,67 +238,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout, onGoToSite }) 
     });
   };
 
-  // Save changes to localStorage and Supabase
+  // Load data from localStorage on mount
   useEffect(() => {
-    const fetchSiteData = async () => {
-      try {
-        const data = await fetchSiteDataFromSupabase();
-        if (data) {
-          if (Array.isArray(data.portfolioProjects) && data.portfolioProjects.length > 0) {
-            setPortfolioProjects(data.portfolioProjects);
-            localStorage.setItem('opera_portfolio_projects', JSON.stringify(data.portfolioProjects));
-          }
-          if (Array.isArray(data.testimonials) && data.testimonials.length > 0) {
-            setTestimonials(data.testimonials);
-            localStorage.setItem('opera_testimonials', JSON.stringify(data.testimonials));
-          }
-          if (Array.isArray(data.agencyProjects) && data.agencyProjects.length > 0) {
-            setAgencyProjects(data.agencyProjects);
-            localStorage.setItem('opera_agency_projects', JSON.stringify(data.agencyProjects));
-          }
-          if (Array.isArray(data.agencyClients) && data.agencyClients.length > 0) {
-            setAgencyClients(data.agencyClients);
-            localStorage.setItem('opera_agency_clients', JSON.stringify(data.agencyClients));
-          }
-          if (Array.isArray(data.registeredLeads)) {
-            setLeads(data.registeredLeads);
-          }
-          if (data.whatsappNumber) {
-            setWhatsappInput(data.whatsappNumber);
-          }
-        }
-      } catch (e) {
-        console.error('Error fetching site-data in AdminPanel:', e);
-      } finally {
-        setIsServerDataLoaded(true);
+    try {
+      const savedProjects = localStorage.getItem('opera_agency_projects');
+      if (savedProjects) {
+        const parsed = JSON.parse(savedProjects);
+        if (Array.isArray(parsed) && parsed.length > 0) setAgencyProjects(parsed);
       }
-    };
-    fetchSiteData();
+      const savedClients = localStorage.getItem('opera_agency_clients');
+      if (savedClients) {
+        const parsed = JSON.parse(savedClients);
+        if (Array.isArray(parsed) && parsed.length > 0) setAgencyClients(parsed);
+      }
+      const savedPortfolio = localStorage.getItem('opera_portfolio_projects');
+      if (savedPortfolio) {
+        const parsed = JSON.parse(savedPortfolio);
+        if (Array.isArray(parsed)) setPortfolioProjects(parsed);
+      }
+      const savedLeads = localStorage.getItem('opera_registered_leads');
+      if (savedLeads) setLeads(JSON.parse(savedLeads));
+      const savedWhatsapp = localStorage.getItem('opera_whatsapp_number');
+      if (savedWhatsapp) setWhatsappInput(savedWhatsapp);
+    } catch (e) {
+      console.error('Error loading from localStorage:', e);
+    } finally {
+      setIsServerDataLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
     localStorage.setItem('opera_agency_projects', JSON.stringify(projects));
-    saveSiteDataToSupabase({ agencyProjects: projects }).catch(e => console.error(e));
   }, [projects, isServerDataLoaded]);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
     localStorage.setItem('opera_agency_clients', JSON.stringify(clients));
-    saveSiteDataToSupabase({ agencyClients: clients }).catch(e => console.error(e));
   }, [clients, isServerDataLoaded]);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
     localStorage.setItem('opera_portfolio_projects', JSON.stringify(portfolioProjects));
-    saveSiteDataToSupabase({ portfolioProjects }).catch(e => console.error(e));
     window.dispatchEvent(new Event('opera_config_changed'));
   }, [portfolioProjects, isServerDataLoaded]);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
     localStorage.setItem('opera_registered_leads', JSON.stringify(leads));
-    saveSiteDataToSupabase({ registeredLeads: leads }).catch(e => console.error(e));
   }, [leads, isServerDataLoaded]);
 
   // Handler: Change Project Status (Drag or Dropdown)

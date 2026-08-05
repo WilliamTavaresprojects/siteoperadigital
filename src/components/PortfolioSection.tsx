@@ -1,139 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, MouseEvent } from 'react';
 import { 
-  ExternalLink, Plus, Search, Filter, Sparkles, Globe, 
-  CheckCircle2, ArrowRight, X, Copy, Check, Eye, Trash2, 
-  Building2, TrendingUp, Laptop, Layers, Share2
+  ExternalLink, Search, Sparkles, Globe, 
+  CheckCircle2, Copy, Check, Eye, Trash2, 
+  Building2, TrendingUp
 } from 'lucide-react';
 import { INITIAL_PORTFOLIO_PROJECTS } from '../data/mockData';
 import { PortfolioProject } from '../types';
-import { fetchSiteDataFromSupabase, saveSiteDataToSupabase } from '../lib/supabaseData';
 
-export const PortfolioSection: React.FC = () => {
-  const [projects, setProjects] = useState<PortfolioProject[]>(() => {
-    try {
-      const saved = localStorage.getItem('opera_portfolio_projects');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {
-      console.error('Error reading projects from localStorage', e);
-    }
-    return INITIAL_PORTFOLIO_PROJECTS;
-  });
-
-  const [isServerDataLoaded, setIsServerDataLoaded] = useState(false);
-
-  // Load shared data from Supabase so every device and browser sees exact same data
-  useEffect(() => {
-    const fetchSiteData = async () => {
-      try {
-        const data = await fetchSiteDataFromSupabase();
-        if (data && Array.isArray(data.portfolioProjects) && data.portfolioProjects.length > 0) {
-          setProjects(data.portfolioProjects);
-          localStorage.setItem('opera_portfolio_projects', JSON.stringify(data.portfolioProjects));
-        }
-      } catch (e) {
-        console.error('Error fetching site data', e);
-      } finally {
-        setIsServerDataLoaded(true);
-      }
-    };
-    fetchSiteData();
-
-    const syncProjects = () => {
-      fetchSiteData();
-    };
-
-    const interval = setInterval(fetchSiteData, 5000);
-
-    window.addEventListener('opera_config_changed', syncProjects);
-    window.addEventListener('storage', syncProjects);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('opera_config_changed', syncProjects);
-      window.removeEventListener('storage', syncProjects);
-    };
-  }, []);
-
+export const PortfolioSection = () => {
+  const [projects] = useState<PortfolioProject[]>(INITIAL_PORTFOLIO_PROJECTS);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedProject, setSelectedProject] = useState<PortfolioProject | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [deletingProject, setDeletingProject] = useState<PortfolioProject | null>(null);
-
-  // New Project Form State
-  const [newTitle, setNewTitle] = useState('');
-  const [newClient, setNewClient] = useState('');
-  const [newCategory, setNewCategory] = useState<PortfolioProject['category']>('E-commerce');
-  const [newDesc, setNewDesc] = useState('');
-  const [newMetric, setNewMetric] = useState('');
-  const [newLink, setNewLink] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState('');
-  const [newTags, setNewTags] = useState('');
-
-  // AI Auto-Fill State
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const [aiError, setAiError] = useState('');
-
-  const handleGenerateAi = async () => {
-    if (!newLink.trim()) {
-      setAiError('Digite a URL do trabalho (link) antes de gerar com IA.');
-      return;
-    }
-
-    setIsGeneratingAi(true);
-    setAiError('');
-
-    try {
-      let formattedLink = newLink.trim();
-      if (!formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
-        formattedLink = 'https://' + formattedLink;
-        setNewLink(formattedLink);
-      }
-
-      const res = await fetch('/api/generate-project-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: formattedLink,
-          clientName: newClient.trim(),
-          category: newCategory,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Erro ao chamar servidor AI');
-      }
-
-      const data = await res.json();
-
-      if (data.title) setNewTitle(data.title);
-      if (data.clientName) setNewClient(data.clientName);
-      if (data.category) setNewCategory(data.category);
-      if (data.description) setNewDesc(data.description);
-      if (data.resultMetric) setNewMetric(data.resultMetric);
-      if (data.imageUrl) setNewImageUrl(data.imageUrl);
-      if (data.tags && Array.isArray(data.tags)) setNewTags(data.tags.join(', '));
-    } catch (err) {
-      console.error(err);
-      setAiError('Ocorreu um erro ao gerar com IA. Você pode preencher os campos manualmente.');
-    } finally {
-      setIsGeneratingAi(false);
-    }
-  };
-
-  // Save to Supabase when projects change
-  useEffect(() => {
-    if (!isServerDataLoaded) return;
-    try {
-      localStorage.setItem('opera_portfolio_projects', JSON.stringify(projects));
-      saveSiteDataToSupabase({ portfolioProjects: projects }).catch(e => console.error(e));
-    } catch (e) {
-      console.error('Error saving projects', e);
-    }
-  }, [projects, isServerDataLoaded]);
 
   const categories = ['Todos', 'E-commerce', 'ERP & PDV', 'Automações & IA', 'Portais & Web Apps'];
 
@@ -149,7 +28,7 @@ export const PortfolioSection: React.FC = () => {
     return matchesCategory && matchesQuery;
   });
 
-  const handleCopyLink = (e: React.MouseEvent, link: string, id: string) => {
+  const handleCopyLink = (e: MouseEvent, link: string, id: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(link);
     setCopiedId(id);
@@ -164,69 +43,9 @@ export const PortfolioSection: React.FC = () => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleAddProject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim() || !newClient.trim() || !newLink.trim()) return;
-
-    let formattedLink = newLink.trim();
-    if (!formattedLink.startsWith('http://') && !formattedLink.startsWith('https://')) {
-      formattedLink = 'https://' + formattedLink;
-    }
-
-    const defaultImages = [
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1556742049-0a670f4a4591?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800',
-      'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=800'
-    ];
-
-    const projectToAdd: PortfolioProject = {
-      id: 'proj-' + Date.now(),
-      title: newTitle.trim(),
-      clientName: newClient.trim(),
-      category: newCategory,
-      description: newDesc.trim() || 'Projeto customizado desenvolvido e implantado com sucesso.',
-      resultMetric: newMetric.trim() || 'Resultado Alcançado',
-      resultLink: formattedLink,
-      imageUrl: newImageUrl.trim() || defaultImages[Math.floor(Math.random() * defaultImages.length)],
-      tags: newTags ? newTags.split(',').map(t => t.trim()).filter(Boolean) : ['Customizado', 'Opera Digital'],
-      completedDate: new Date().toISOString().substring(0, 7)
-    };
-
-    setProjects([projectToAdd, ...projects]);
-    setIsAddModalOpen(false);
-
-    // Reset Form
-    setNewTitle('');
-    setNewClient('');
-    setNewCategory('E-commerce');
-    setNewDesc('');
-    setNewMetric('');
-    setNewLink('');
-    setNewImageUrl('');
-    setNewTags('');
-  };
-
-  const handleDeleteProject = (e: React.MouseEvent, project: PortfolioProject) => {
-    e.stopPropagation();
-    setDeletingProject(project);
-  };
-
-  const confirmDelete = () => {
-    if (!deletingProject) return;
-    const targetId = deletingProject.id;
-    setProjects(prev => prev.filter(p => p.id !== targetId));
-    if (selectedProject?.id === targetId) {
-      setSelectedProject(null);
-    }
-    setDeletingProject(null);
-  };
-
   return (
     <section id="trabalhos" className="py-20 bg-[#030712] text-white border-t border-slate-800/80 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3 shadow-2xs">
@@ -242,14 +61,11 @@ export const PortfolioSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
         {filteredProjects.length === 0 ? (
           <div className="bg-[#0B0F19] rounded-2xl border border-slate-800 p-12 text-center max-w-md mx-auto my-8">
             <Building2 className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-            <h3 className="font-bold text-slate-200 text-base">Nenhum trabalho cadastrado</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Os trabalhos cadastrados no Painel do Administrador serão exibidos aqui em tempo real.
-            </p>
+            <h3 className="font-bold text-slate-200 text-base">Nenhum trabalho encontrado</h3>
+            <p className="text-xs text-slate-400 mt-1">Tente buscar por outra categoria ou termo.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 sm:gap-8">
@@ -259,7 +75,6 @@ export const PortfolioSection: React.FC = () => {
                 onClick={() => setSelectedProject(project)}
                 className="bg-[#0B0F19] rounded-2xl border border-slate-800 shadow-xl hover:shadow-2xl hover:border-blue-500/40 transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
               >
-                {/* Project Image Header with Overlay */}
                 <div className="relative h-48 sm:h-56 w-full overflow-hidden bg-slate-900">
                   <img
                     src={project.imageUrl}
@@ -268,23 +83,11 @@ export const PortfolioSection: React.FC = () => {
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-slate-900/40 to-transparent" />
-
-                  {/* Category & Metric Badges */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
                     <span className="bg-[#030712]/90 backdrop-blur-md text-blue-400 border border-blue-500/20 text-[11px] font-extrabold px-3 py-1 rounded-full shadow-xs">
                       {project.category}
                     </span>
-
-                    <button
-                      onClick={(e) => handleDeleteProject(e, project)}
-                      className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-xl transition-all shadow-md z-10 flex items-center justify-center min-h-[36px] min-w-[36px]"
-                      title="Excluir trabalho"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-
-                  {/* Title & Client inside Image Gradient */}
                   <div className="absolute bottom-3 left-4 right-4 text-white">
                     <div className="text-[11px] font-medium opacity-90 uppercase tracking-wider text-slate-300">
                       Cliente: {project.clientName}
@@ -295,13 +98,11 @@ export const PortfolioSection: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Body */}
                 <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
                   <p className="text-xs sm:text-sm text-slate-300 line-clamp-2 leading-relaxed">
                     {project.description}
                   </p>
 
-                  {/* Result Metric Banner */}
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-bold text-blue-400">
                       <TrendingUp className="w-4 h-4 text-blue-400" />
@@ -312,7 +113,6 @@ export const PortfolioSection: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Tags & Action Buttons */}
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-3">
                     <div className="flex flex-wrap gap-1.5 max-w-[60%]">
                       {project.tags.map((tag, idx) => (
@@ -324,8 +124,6 @@ export const PortfolioSection: React.FC = () => {
                         </span>
                       ))}
                     </div>
-
-                    {/* View Result Actions */}
                     <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => handleCopyLink(e, project.resultLink, project.id)}
@@ -338,7 +136,6 @@ export const PortfolioSection: React.FC = () => {
                           <Copy className="w-4 h-4" />
                         )}
                       </button>
-
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -356,17 +153,14 @@ export const PortfolioSection: React.FC = () => {
             ))}
           </div>
         )}
-
       </div>
 
-      {/* LIVE RESULT DETAILS & PREVIEW MODAL */}
       {selectedProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
           <div 
             className="bg-[#0B0F19] rounded-3xl max-w-3xl w-full border border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col text-white"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Browser Header Bar Mockup */}
             <div className="bg-[#080C14] px-4 py-3 text-white flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
@@ -379,7 +173,6 @@ export const PortfolioSection: React.FC = () => {
                   <span className="truncate">{selectedProject.resultLink}</span>
                 </div>
               </div>
-
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleOpenLiveLink(selectedProject.resultLink)}
@@ -388,39 +181,27 @@ export const PortfolioSection: React.FC = () => {
                   <span>Abrir em Nova Aba</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
-
                 <button
                   onClick={() => setSelectedProject(null)}
                   className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <span className="text-lg">&times;</span>
                 </button>
               </div>
             </div>
 
-            {/* Modal Body Scrollable */}
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
-              
-              {/* Project Title & Category */}
               <div>
                 <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">
                   <span>{selectedProject.category}</span>
-                  <span>•</span>
+                  <span>&bull;</span>
                   <span>Cliente: {selectedProject.clientName}</span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
-                  {selectedProject.title}
-                </h3>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-white">{selectedProject.title}</h3>
               </div>
 
-              {/* Preview Image Banner */}
               <div className="relative rounded-2xl overflow-hidden border border-slate-800 h-64 sm:h-80 bg-slate-900">
-                <img
-                  src={selectedProject.imageUrl}
-                  alt={selectedProject.title}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
+                <img src={selectedProject.imageUrl} alt={selectedProject.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <button
                     onClick={() => handleOpenLiveLink(selectedProject.resultLink)}
@@ -432,313 +213,49 @@ export const PortfolioSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Result Metric highlight */}
               <div className="bg-[#111827] border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">
-                    Impacto Alcançado
-                  </span>
-                  <div className="text-2xl font-black text-blue-400 mt-0.5">
-                    {selectedProject.resultMetric}
-                  </div>
+                  <span className="text-xs font-bold uppercase text-slate-400 tracking-wider">Impacto Alcançado</span>
+                  <div className="text-2xl font-black text-blue-400 mt-0.5">{selectedProject.resultMetric}</div>
                 </div>
-
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => handleCopyLink(e, selectedProject.resultLink, selectedProject.id)}
                     className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 shadow-2xs flex items-center gap-2"
                   >
                     {copiedId === selectedProject.id ? (
-                      <>
-                        <Check className="w-4 h-4 text-emerald-400" />
-                        <span>Link Copiado!</span>
-                      </>
+                      <><Check className="w-4 h-4 text-emerald-400" /><span>Link Copiado!</span></>
                     ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        <span>Copiar URL do Projeto</span>
-                      </>
+                      <><Copy className="w-4 h-4" /><span>Copiar URL do Projeto</span></>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Description */}
               <div>
                 <h4 className="font-bold text-white text-sm mb-2">Sobre este trabalho:</h4>
-                <p className="text-slate-300 text-sm leading-relaxed">
-                  {selectedProject.description}
-                </p>
+                <p className="text-slate-300 text-sm leading-relaxed">{selectedProject.description}</p>
               </div>
 
-              {/* Tags */}
               <div>
-                <h4 className="font-bold text-xs mb-2 uppercase tracking-wider text-slate-400">
-                  Tecnologias & Soluções Aplicadas:
-                </h4>
+                <h4 className="font-bold text-xs mb-2 uppercase tracking-wider text-slate-400">Tecnologias & Soluções Aplicadas:</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedProject.tags.map((t, idx) => (
-                    <span
-                      key={idx}
-                      className="bg-slate-900 text-slate-300 font-semibold text-xs px-3 py-1.5 rounded-lg border border-slate-800"
-                    >
-                      #{t}
-                    </span>
+                    <span key={idx} className="bg-slate-900 text-slate-300 font-semibold text-xs px-3 py-1.5 rounded-lg border border-slate-800">#{t}</span>
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* Modal Footer */}
             <div className="bg-[#080C14] p-4 px-6 border-t border-slate-800 flex items-center justify-between">
               <span className="text-xs text-slate-400">
-                Link do resultado: <strong className="font-mono text-slate-200">{selectedProject.resultLink}</strong>
+                Link: <strong className="font-mono text-slate-200">{selectedProject.resultLink}</strong>
               </span>
-
-              <button
-                onClick={() => setSelectedProject(null)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors"
-              >
-                Fechar
-              </button>
+              <button onClick={() => setSelectedProject(null)} className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition-colors">Fechar</button>
             </div>
           </div>
         </div>
       )}
-
-      {/* ADD NEW PROJECT MODAL */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div 
-            className="bg-white rounded-3xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="bg-slate-900 text-white p-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-extrabold flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-400" />
-                  <span>Cadastrar Novo Trabalho Realizado</span>
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Adicione um novo projeto com o link do resultado final para exibir no seu portfólio.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddProject} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              
-              {/* AI AUTO GENERATE BANNER */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-100 rounded-2xl space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold text-blue-900">
-                    <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
-                    <span>Geração Automática de Publicação com IA</span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Insira o link (URL) do seu projeto abaixo e clique em <strong>Gerar com IA</strong> para criar título, descrição, imagem e tags automaticamente!
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Link do Resultado Final (URL) *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    required
-                    value={newLink}
-                    onChange={(e) => {
-                      setNewLink(e.target.value);
-                      if (aiError) setAiError('');
-                    }}
-                    placeholder="https://seusite.com.br ou https://cliente.com.br"
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4] font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleGenerateAi}
-                    disabled={isGeneratingAi || !newLink.trim()}
-                    className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 whitespace-nowrap min-h-[42px]"
-                  >
-                    {isGeneratingAi ? (
-                      <>
-                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Gerando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 text-blue-200" />
-                        <span>Gerar com IA</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                {aiError && (
-                  <p className="text-xs text-rose-600 mt-1">{aiError}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Título do Projeto *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: E-commerce de Peças Automotivas"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Nome do Cliente / Empresa *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newClient}
-                    onChange={(e) => setNewClient(e.target.value)}
-                    placeholder="Ex: Nexon Distribuidora"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Categoria *
-                  </label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                  >
-                    <option value="E-commerce">E-commerce</option>
-                    <option value="ERP & PDV">ERP & PDV</option>
-                    <option value="Automações & IA">Automações & IA</option>
-                    <option value="Portais & Web Apps">Portais & Web Apps</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Métrica Principal de Resultado
-                </label>
-                <input
-                  type="text"
-                  value={newMetric}
-                  onChange={(e) => setNewMetric(e.target.value)}
-                  placeholder="Ex: +250% de faturamento em 3 meses"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Descrição do Projeto
-                </label>
-                <textarea
-                  rows={3}
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Descreva resumidamente o que foi desenvolvido e os benefícios gerados..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  URL da Imagem da Capa (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  Tags (Separadas por vírgula)
-                </label>
-                <input
-                  type="text"
-                  value={newTags}
-                  onChange={(e) => setNewTags(e.target.value)}
-                  placeholder="Ex: E-commerce, NFe, Pix"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#0A4EE4]"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-[#0A4EE4] hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
-                >
-                  Salvar Trabalho no Portfólio
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE CONFIRMATION MODAL */}
-      {deletingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-100 text-slate-800">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-slate-900">Excluir Trabalho?</h3>
-              <p className="text-xs text-slate-500">
-                Tem certeza que deseja remover o trabalho <strong className="text-slate-800">"{deletingProject.title}"</strong> ({deletingProject.clientName}) do seu portfólio? Esta ação é imediata.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingProject(null)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors min-h-[44px]"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors min-h-[44px]"
-              >
-                Sim, Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
     </section>
   );
 };

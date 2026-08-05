@@ -4,7 +4,7 @@ import {
   Building, Lock, Mail, Phone, User, Check, AlertCircle, ArrowRight
 } from 'lucide-react';
 import { RegistrationFormData } from '../types';
-import { fetchSiteDataFromSupabase, saveSiteDataToSupabase } from '../lib/supabaseData';
+
 
 interface RegistrationPageProps {
   onNavigateHome: () => void;
@@ -110,14 +110,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
       leads.unshift(newLead);
       localStorage.setItem('opera_registered_leads', JSON.stringify(leads));
 
-      // Save to Supabase
-      fetchSiteDataFromSupabase()
-        .then(data => {
-          const currentLeads = Array.isArray(data?.registeredLeads) ? data.registeredLeads : [];
-          const updated = [newLead, ...currentLeads.filter((l: any) => l.id !== newLead.id)];
-          saveSiteDataToSupabase({ registeredLeads: updated }).catch(e => console.error(e));
-        })
-        .catch(e => console.error('Error syncing lead to Supabase:', e));
+
     } catch (e) {
       console.error(e);
     }

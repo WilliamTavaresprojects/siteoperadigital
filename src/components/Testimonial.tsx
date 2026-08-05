@@ -1,41 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Star, Quote, TrendingUp, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getStoredTestimonials } from '../utils/siteSettings';
+import { TESTIMONIAL_DATA } from '../data/mockData';
 import { TestimonialData } from '../types';
-import { fetchSiteDataFromSupabase } from '../lib/supabaseData';
 
-export const Testimonial: React.FC = () => {
-  const [testimonials, setTestimonials] = useState<TestimonialData[]>(getStoredTestimonials());
+export const Testimonial = () => {
+  const [testimonials] = useState<TestimonialData[]>([TESTIMONIAL_DATA]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const loadTestimonials = async () => {
-      try {
-        const data = await fetchSiteDataFromSupabase();
-        if (data && Array.isArray(data.testimonials) && data.testimonials.length > 0) {
-          setTestimonials(data.testimonials);
-          localStorage.setItem('opera_testimonials', JSON.stringify(data.testimonials));
-          return;
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      const list = getStoredTestimonials();
-      setTestimonials(list);
-    };
-
-    loadTestimonials();
-
-    const interval = setInterval(loadTestimonials, 5000);
-
-    window.addEventListener('opera_config_changed', loadTestimonials);
-    window.addEventListener('storage', loadTestimonials);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('opera_config_changed', loadTestimonials);
-      window.removeEventListener('storage', loadTestimonials);
-    };
-  }, []);
 
   if (testimonials.length === 0) return null;
 
@@ -54,14 +24,10 @@ export const Testimonial: React.FC = () => {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[#0A4EE4]/10 blur-[160px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        
         <div className="bg-[#0B0F19] rounded-3xl p-8 sm:p-12 border border-slate-800 shadow-2xl relative">
-          
           <Quote className="absolute top-6 right-8 w-16 h-16 text-slate-800/60 pointer-events-none" />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left Author Photo & Highlight Badge */}
             <div className="lg:col-span-4 flex flex-col items-center text-center lg:border-r lg:border-slate-800 lg:pr-8">
               <div className="relative mb-4">
                 <img 
@@ -74,26 +40,16 @@ export const Testimonial: React.FC = () => {
                 </div>
               </div>
 
-              <h4 className="font-extrabold text-xl text-white">
-                {current.author}
-              </h4>
+              <h4 className="font-extrabold text-xl text-white">{current.author}</h4>
+              <p className="text-xs text-blue-400 font-semibold mt-0.5">{current.role}</p>
+              <p className="text-xs text-slate-400 mt-1">{current.company}</p>
 
-              <p className="text-xs text-blue-400 font-semibold mt-0.5">
-                {current.role}
-              </p>
-
-              <p className="text-xs text-slate-400 mt-1">
-                {current.company}
-              </p>
-
-              {/* Star Rating */}
               <div className="flex gap-1 mt-3 text-amber-400">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                 ))}
               </div>
 
-              {/* Tags */}
               <div className="flex flex-wrap justify-center gap-1.5 mt-4">
                 {(current.tags || []).map((tag, tIdx) => (
                   <span key={tIdx} className="text-[10px] bg-slate-900 border border-slate-800 text-slate-300 font-medium px-2.5 py-0.5 rounded-full">
@@ -103,7 +59,6 @@ export const Testimonial: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Quote Content & Results */}
             <div className="lg:col-span-8 space-y-6">
               <div className="flex items-center justify-between">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
@@ -113,21 +68,11 @@ export const Testimonial: React.FC = () => {
 
                 {testimonials.length > 1 && (
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handlePrev}
-                      className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-                      title="Depoimento Anterior"
-                    >
+                    <button onClick={handlePrev} className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors" title="Depoimento Anterior">
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-xs text-slate-400 font-mono">
-                      {currentIndex + 1} / {testimonials.length}
-                    </span>
-                    <button
-                      onClick={handleNext}
-                      className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
-                      title="Próximo Depoimento"
-                    >
+                    <span className="text-xs text-slate-400 font-mono">{currentIndex + 1} / {testimonials.length}</span>
+                    <button onClick={handleNext} className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors" title="Proximo Depoimento">
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -135,25 +80,17 @@ export const Testimonial: React.FC = () => {
               </div>
 
               <p className="text-lg sm:text-2xl font-semibold text-slate-100 leading-relaxed italic">
-                "{current.quote}"
+                &ldquo;{current.quote}&rdquo;
               </p>
 
               <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
-                <span>
-                  Sistemas web, e-commerces, aplicativos mobile e robôs de atendimento no WhatsApp Web
-                </span>
-                <span className="text-blue-400 font-bold">
-                  Soluções Sob Medida Opera Digital
-                </span>
+                <span>Sistemas web, e-commerces, aplicativos mobile e robôs de atendimento no WhatsApp Web</span>
+                <span className="text-blue-400 font-bold">Soluções Sob Medida Opera Digital</span>
               </div>
             </div>
-
           </div>
-
         </div>
-
       </div>
     </section>
   );
 };
-

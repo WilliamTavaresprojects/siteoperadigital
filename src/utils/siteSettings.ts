@@ -1,6 +1,5 @@
 import { TestimonialData } from '../types';
 import { TESTIMONIAL_DATA } from '../data/mockData';
-import { fetchSiteDataFromSupabase, saveSiteDataToSupabase } from '../lib/supabaseData';
 
 export const DEFAULT_WHATSAPP_NUMBER = '5551992379969';
 
@@ -24,7 +23,6 @@ export function setWhatsAppNumber(num: string): void {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('opera_whatsapp_number', clean);
-      saveSiteDataToSupabase({ whatsappNumber: clean }).catch(e => console.error(e));
       window.dispatchEvent(new Event('opera_config_changed'));
     } catch (e) {
       console.error(e);
@@ -58,39 +56,9 @@ export function saveStoredTestimonials(list: TestimonialData[]): void {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem('opera_testimonials', JSON.stringify(list));
-      saveSiteDataToSupabase({ testimonials: list }).catch(e => console.error(e));
       window.dispatchEvent(new Event('opera_config_changed'));
     } catch (e) {
       console.error(e);
     }
   }
-}
-
-export function syncSiteSettingsWithServer(): void {
-  if (typeof window === 'undefined') return;
-
-  fetchSiteDataFromSupabase().then(data => {
-    if (data) {
-      if (data.whatsappNumber) {
-        localStorage.setItem('opera_whatsapp_number', data.whatsappNumber);
-      }
-      if (Array.isArray(data.testimonials) && data.testimonials.length > 0) {
-        localStorage.setItem('opera_testimonials', JSON.stringify(data.testimonials));
-      }
-      if (Array.isArray(data.portfolioProjects) && data.portfolioProjects.length > 0) {
-        localStorage.setItem('opera_portfolio_projects', JSON.stringify(data.portfolioProjects));
-      }
-      if (Array.isArray(data.agencyProjects) && data.agencyProjects.length > 0) {
-        localStorage.setItem('opera_agency_projects', JSON.stringify(data.agencyProjects));
-      }
-      if (Array.isArray(data.agencyClients) && data.agencyClients.length > 0) {
-        localStorage.setItem('opera_agency_clients', JSON.stringify(data.agencyClients));
-      }
-      window.dispatchEvent(new Event('opera_config_changed'));
-    }
-  }).catch(e => console.error('Error syncing site settings via Supabase:', e));
-}
-
-if (typeof window !== 'undefined') {
-  syncSiteSettingsWithServer();
 }
