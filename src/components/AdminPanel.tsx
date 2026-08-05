@@ -230,9 +230,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout, onGoToSite }) 
       title: 'Excluir Depoimento',
       message: `Tem certeza que deseja excluir o depoimento de "${name || 'Cliente'}"?`,
       action: () => {
-        const updatedList = testimonials.filter(t => t.id !== id);
-        setTestimonials(updatedList);
-        saveStoredTestimonials(updatedList);
+        setTestimonials(prev => {
+          const updatedList = prev.filter(t => t.id !== id);
+          saveStoredTestimonials(updatedList);
+          return updatedList;
+        });
       }
     });
   };
