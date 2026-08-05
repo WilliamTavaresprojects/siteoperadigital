@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, Plus, ExternalLink, Trash2, Edit3, Search, 
   Users, TrendingUp, Sparkles, LogOut, CheckCircle2, ArrowLeft,
@@ -35,7 +35,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout, onGoToSite }) 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ title: string; message: string; action: () => void } | null>(null);
   const [isServerDataLoaded, setIsServerDataLoaded] = useState(false);
-  const lastLocalChangeRef = useRef(0);
 
   // --- 1. Agency Projects State ---
   const [projects, setAgencyProjects] = useState<AgencyProject[]>(() => {
@@ -276,32 +275,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout, onGoToSite }) 
       }
     };
     fetchSiteData();
-
-    // Auto sync across devices every 6 seconds (skip if local change happened recently)
-    const interval = setInterval(() => {
-      if (Date.now() - lastLocalChangeRef.current < 3000) return;
-      fetchSiteData();
-    }, 6000);
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
-    lastLocalChangeRef.current = Date.now();
     localStorage.setItem('opera_agency_projects', JSON.stringify(projects));
     saveSiteDataToSupabase({ agencyProjects: projects }).catch(e => console.error(e));
   }, [projects, isServerDataLoaded]);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
-    lastLocalChangeRef.current = Date.now();
     localStorage.setItem('opera_agency_clients', JSON.stringify(clients));
     saveSiteDataToSupabase({ agencyClients: clients }).catch(e => console.error(e));
   }, [clients, isServerDataLoaded]);
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
-    lastLocalChangeRef.current = Date.now();
     localStorage.setItem('opera_portfolio_projects', JSON.stringify(portfolioProjects));
     saveSiteDataToSupabase({ portfolioProjects }).catch(e => console.error(e));
     window.dispatchEvent(new Event('opera_config_changed'));
@@ -309,7 +298,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onLogout, onGoToSite }) 
 
   useEffect(() => {
     if (!isServerDataLoaded) return;
-    lastLocalChangeRef.current = Date.now();
     localStorage.setItem('opera_registered_leads', JSON.stringify(leads));
     saveSiteDataToSupabase({ registeredLeads: leads }).catch(e => console.error(e));
   }, [leads, isServerDataLoaded]);

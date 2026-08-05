@@ -93,5 +93,4 @@ export function syncSiteSettingsWithServer(): void {
 
 if (typeof window !== 'undefined') {
   syncSiteSettingsWithServer();
-  setInterval(syncSiteSettingsWithServer, 5000);
 }
